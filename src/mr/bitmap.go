@@ -19,7 +19,7 @@ func (bt *BitMap) Set(n uint) {
 	}
 	byteIndex := n / Size                //第x个字节（0,1,2...）
 	offsetIndex := n % Size              //偏移量(0<偏移量<byteSize)
-	(*bt)[byteIndex] |= 1 << offsetIndex //异或1（置位）
+	(*bt)[byteIndex] ^= 1 << offsetIndex //异或1（置位）
 }
 
 func (bt *BitMap) AllTasksDone() bool {

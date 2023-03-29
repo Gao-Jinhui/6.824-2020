@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -128,7 +129,7 @@ func (m *Master) catchTimeOut() {
 }
 
 func (m *Master) createMapTask() {
-	//m.BitMap = NewBitMap(len(m.InputFiles))
+	m.BitMap = NewBitMap(len(m.InputFiles))
 	// 根据传入的filename，每个文件对应一个map task
 	for idx, filename := range m.InputFiles {
 		taskMeta := Task{
@@ -142,13 +143,13 @@ func (m *Master) createMapTask() {
 			MetaState:     Idle,
 			TaskReference: &taskMeta,
 		}
-		//m.BitMap.Set(uint(idx))
+		m.BitMap.Set(uint(idx))
 	}
-	//fmt.Println(m.BitMap)
+	fmt.Println(m.BitMap)
 }
 
 func (m *Master) createReduceTask() {
-	//m.BitMap = NewBitMap(len(m.Intermediates))
+	m.BitMap = NewBitMap(len(m.Intermediates))
 	m.MetaTaskMap = make(map[int]*MetaTask)
 	for idx, files := range m.Intermediates {
 		task := Task{
@@ -162,9 +163,9 @@ func (m *Master) createReduceTask() {
 			MetaState:     Idle,
 			TaskReference: &task,
 		}
-		//m.BitMap.Set(uint(idx))
+		m.BitMap.Set(uint(idx))
 	}
-	//fmt.Println(m.BitMap)
+	fmt.Println(m.BitMap)
 }
 
 func max(a int, b int) int {
@@ -208,30 +209,21 @@ func (m *Master) processTaskResult(task *Task) {
 	defer mu.Unlock()
 	switch task.TaskState {
 	case Map:
-		//m.BitMap.Set(uint(task.TaskNumber))
+		m.BitMap.Set(uint(task.TaskNumber))
 		//收集intermediate信息
 		for reduceTaskId, filePath := range task.Intermediates {
 			m.Intermediates[reduceTaskId] = append(m.Intermediates[reduceTaskId], filePath)
 		}
-		if m.allTaskDone() {
+		if m.BitMap.AllTasksDone() {
 			//获得所以map task后，进入reduce阶段
 			m.createReduceTask()
 			m.MasterPhase = Reduce
 		}
 	case Reduce:
-		//m.BitMap.Set(uint(task.TaskNumber))
-		if m.allTaskDone() {
+		m.BitMap.Set(uint(task.TaskNumber))
+		if m.BitMap.AllTasksDone() {
 			//获得所以reduce task后，进入exit阶段
 			m.MasterPhase = Exit
 		}
 	}
-}
-
-func (m *Master) allTaskDone() bool {
-	for _, task := range m.MetaTaskMap {
-		if task.MetaState != Completed {
-			return false
-		}
-	}
-	return true
 }
